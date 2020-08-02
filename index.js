@@ -9,7 +9,7 @@ app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
   next();
 });
-app.get('/', (req, res) => {
+app.get('/getVideo', (req, res) => {
   sql.query('SELECT * FROM videoDetails', (err,rows) => {
     if(err) throw err;
     console.log('Data received from Db:');
