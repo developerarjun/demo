@@ -18,6 +18,10 @@ app.get('/getVideo', (req, res) => {
   });
   //res.send(rows);
 })
+app.get('/', (req, res) => {
+  res.send("HEllo");
+  console.log("sads");
+})
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`)
 })
