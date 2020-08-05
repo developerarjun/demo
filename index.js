@@ -2,13 +2,42 @@
 const express = require('express')
 const app = express()
 var cors = require('cors');
-const port = process.env.PORT || 3003;
-app.use(function(req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-  next();
-});
+const bodyParser = require("body-parser");
+const port = process.env.PORT || 3004;
+const cookieParser = require('cookie-parser');
+const session = require('express-session');
 
+var morgan = require('morgan');
+app.use(morgan('dev'));
+app.use(function(req, res, next) {
+  res.header('Access-Control-Allow-Credentials', true);
+  res.header('Access-Control-Allow-Origin', req.headers.origin);
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+  res.header('Access-Control-Allow-Headers', 'X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept');
+  if ('OPTIONS' == req.method) {
+       res.send(200);
+   } else {
+       next();
+   }
+});
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
+app.use(cookieParser())
+app.use(session({
+  key: 'user_sid',
+  secret: 'somerandonstuffs',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+      expires: 600000
+  }
+}));
+app.use((req, res, next) => {
+    if (req.cookies.user_sid && !req.session.user) {
+        res.clearCookie('user_sid');        
+    }
+    next();
+});
 var mysql = require('mysql')
   var db_config = {
     host: '148.72.232.149',
@@ -51,9 +80,85 @@ app.get('/getVideo', (req, res) => {
   });
   //res.send(rows);
 })
+
+app.post('/addUser', (req, res) => {
+  console.log(req.body);
+  let msg = ''; 
+  if(req.body.name != undefined && req.body.phoneNumber != undefined && req.body.email != undefined && req.body.password != undefined){
+    let sq = 'INSERT INTO user_details( name, phone_number, email, password, total_earning) VALUES (?,?,?,?,?)';
+    let values = [req.body.name,req.body.phoneNumber, req.body.email,req.body.password,'0'];
+    connection.query(sq, values, (err, results, fields) => {
+    if (err) {
+      return console.error(err.message);
+    }
+    // get inserted id
+    
+  res.status(200).json({
+    status: 'succes',
+    data: req.body,
+  })
+    });
+  }
+})
 app.get('/', (req, res) => {
-  res.json("HEllo");
-  console.log("sads");
+ // console.log(req);
+  if (req.session.loggedin) {
+    res.status(200).json({
+    status: 'login',
+    data: req.session.username,
+  })
+	} else { 
+    res.status(200).json({
+    status: 'unlogin',
+    data: "Plz Login",
+  })
+	}
+	res.end();
+})
+app.post('/getEarn', (req, res) => {
+  console.log(req.body.user);
+   connection.query('SELECT total_earning FROM user_details where email =? ',[req.body.user], (err,rows) => {
+    res.status(200).json({
+      status: 'data',
+      data: rows
+        })
+  });
+})
+app.post('/addEarn', (req, res) => {
+  console.log(req.body.user);
+  
+   connection.query('UPDATE user_details set total_earning = ? where email = ?',[req.body.earning,req.body.user], (err,rows) => {
+    res.status(200).json({
+      status: 'data',
+      data: rows
+        })
+  });
+})
+app.post('/login', (req, res) => {
+  var username = req.body.username;
+  var password = req.body.password;
+  if (username && password) {
+    connection.query('SELECT * FROM user_details where email =? and password = ?',[username,password], (err,rows) => {
+      if (rows.length > 0) {
+				req.session.loggedin = true;
+        req.session.username = username;
+         res.status(200).json({
+            status: 'loginsuccess',
+            data: req.session.username,
+              })
+			} else {
+        res.status(200).json({
+            status: 'invalid',
+            data: "Incorrect Username and/or password",
+              })
+			}			
+			res.end();
+    });
+  }
+  else {
+		res.send('Please enter Username and Password!');
+		res.end();
+	}
 })
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`)
