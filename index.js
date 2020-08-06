@@ -81,6 +81,16 @@ app.get('/getVideo', (req, res) => {
   //res.send(rows);
 })
 
+app.get('/getUsers', (req, res) => {
+  connection.query('SELECT * FROM user_details', (err,rows) => {
+
+    if(err) throw err;
+    console.log('Data received from Db:');
+    //console.log(rows);
+    res.json(rows);
+  });
+  //res.send(rows);
+})
 app.post('/addUser', (req, res) => {
   console.log(req.body);
   let msg = ''; 
@@ -92,6 +102,60 @@ app.post('/addUser', (req, res) => {
       return console.error(err.message);
     }
     // get inserted id
+    
+  res.status(200).json({
+    status: 'succes',
+    data: req.body,
+  })
+    });
+  }
+})
+
+
+app.post('/addVideo', (req, res) => {
+  console.log(req.body);
+  let msg = ''; 
+  if(req.body.Action == 'A'){
+    let sq = 'INSERT INTO videoDetails( channelNAme, videoName, videoDescription, earningRate, url,uploadBy) VALUES (?,?,?,?,?,?)';
+    let values = [req.body.channelNAme, req.body.videoName,req.body.videoDescription,req.body.earningRate, req.body.url,req.body.uploadBy];
+    connection.query(sq, values, (err, results, fields) => {
+    if (err) {
+      return console.error(err.message);
+    }
+    // get inserted id
+    
+  res.status(200).json({
+    status: 'succes',
+    data: "successfully added",
+  })
+    });
+  }else if(req.body.Action == 'E'){
+    let sq = 'UPDATE videoDetails SET channelNAme = ?, videoName = ?, videoDescription = ?, earningRate = ?, url = ?,uploadBy =? where videoID = ?';
+    let values = [req.body.channelNAme, req.body.videoName,req.body.videoDescription,req.body.earningRate, req.body.url,req.body.uploadBy,req.body.videoID];
+    connection.query(sq, values, (err, results, fields) => {
+    if (err) {
+      return console.error(err.message);
+    }
+    // get inserted id
+    
+  res.status(200).json({
+    status: 'succes',
+    data: "successfully updated",
+  })
+    });
+  }
+})
+app.post('/deleteVideo', (req, res) => {
+  console.log(req.body);
+  let msg = ''; 
+  if(req.body.id != undefined){
+    let sq = 'DELETE FROM videoDetails WHERE videoID = ?';
+    let values = [req.body.id];
+    connection.query(sq, values, (err, results, fields) => {
+    if (err) {
+      return console.error(err.message);
+    }
+    // get deleted id
     
   res.status(200).json({
     status: 'succes',
@@ -139,6 +203,32 @@ app.post('/login', (req, res) => {
   var password = req.body.password;
   if (username && password) {
     connection.query('SELECT * FROM user_details where email =? and password = ?',[username,password], (err,rows) => {
+      if (rows.length > 0) {
+				req.session.loggedin = true;
+        req.session.username = username;
+         res.status(200).json({
+            status: 'loginsuccess',
+            data: req.session.username,
+              })
+			} else {
+        res.status(200).json({
+            status: 'invalid',
+            data: "Incorrect Username and/or password",
+              })
+			}			
+			res.end();
+    });
+  }
+  else {
+		res.send('Please enter Username and Password!');
+		res.end();
+	}
+})
+app.post('/adminlogin', (req, res) => {
+  var username = req.body.username;
+  var password = req.body.password;
+  if (username && password) {
+    connection.query('SELECT * FROM admin_details where admin_email =? and password = ?',[username,password], (err,rows) => {
       if (rows.length > 0) {
 				req.session.loggedin = true;
         req.session.username = username;
